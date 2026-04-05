@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bay Area Open Mats - March 2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f7; color: #1d1d1f; }
+  header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color: white; padding: 2rem; text-align: center; }
+  header h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; }
+  header p { opacity: 0.8; font-size: 0.95rem; }
+  #map { height: 500px; width: 100%; border-bottom: 3px solid #0f3460; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+  .filters { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; position: sticky; top: 0; background: #f5f5f7; padding: 1rem 0; z-index: 400; }
+  .filter-btn { padding: 0.5rem 1.2rem; border: 2px solid #0f3460; border-radius: 999px; background: white; color: #0f3460; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; }
+  .filter-btn:hover, .filter-btn.active { background: #0f3460; color: white; }
+  .day-section { margin-bottom: 2rem; }
+  .day-header { font-size: 1.4rem; font-weight: 700; padding: 0.75rem 1rem; border-radius: 10px; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+  .day-header.wednesday { background: #e8f5e9; color: #2e7d32; }
+  .day-header.friday { background: #e3f2fd; color: #1565c0; }
+  .day-header.saturday { background: #fff3e0; color: #e65100; }
+  .day-header.sunday { background: #fce4ec; color: #c62828; }
+  .gym-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 0.75rem; }
+  .gym-card { background: white; border-radius: 10px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: transform 0.15s, box-shadow 0.15s; cursor: pointer; border-left: 4px solid transparent; }
+  .gym-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+  .gym-card.wednesday { border-left-color: #4caf50; }
+  .gym-card.friday { border-left-color: #1e88e5; }
+  .gym-card.saturday { border-left-color: #fb8c00; }
+  .gym-card.sunday { border-left-color: #e53935; }
+  .gym-info h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.2rem; }
+  .gym-info .city { font-size: 0.8rem; color: #666; }
+  .gym-info .tags { display: flex; gap: 0.3rem; margin-top: 0.3rem; flex-wrap: wrap; }
+  .tag { font-size: 0.65rem; padding: 0.15rem 0.5rem; border-radius: 999px; font-weight: 600; }
+  .tag.nogi { background: #f3e5f5; color: #7b1fa2; }
+  .tag.gi { background: #e8eaf6; color: #283593; }
+  .tag.women { background: #fce4ec; color: #c62828; }
+  .tag.kids { background: #e0f7fa; color: #00838f; }
+  .gym-time { font-size: 1rem; font-weight: 700; color: #0f3460; white-space: nowrap; margin-left: 1rem; }
+  .count-badge { background: rgba(255,255,255,0.25); padding: 0.2rem 0.7rem; border-radius: 999px; font-size: 0.85rem; }
+  .search-box { width: 100%; padding: 0.7rem 1rem; border: 2px solid #ddd; border-radius: 10px; font-size: 1rem; margin-bottom: 1rem; outline: none; transition: border-color 0.2s; }
+  .search-box:focus { border-color: #0f3460; }
+  .legend { display: flex; gap: 1rem; flex-wrap: wrap; padding: 0.75rem 1rem; background: white; border-radius: 10px; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 0.85rem; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 0.3rem; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+  @media (max-width: 600px) { .gym-grid { grid-template-columns: 1fr; } #map { height: 350px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Bay Area Open Mats</h1>
+  <p>March 2026 Schedule &middot; Source: @bayareaopenmat</p>
+</header>
+
+<div id="map"></div>
+
+<div class="container">
+  <input type="text" class="search-box" id="search" placeholder="Search by gym name or city...">
+
+  <div class="legend">
+    <strong>Map pins:</strong>
+    <span class="legend-item"><span class="legend-dot" style="background:#2e7d32"></span> Wed</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#1565c0"></span> Fri</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#e65100"></span> Sat</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#c62828"></span> Sun</span>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" data-day="all">All Days</button>
+    <button class="filter-btn" data-day="wednesday">Wednesday</button>
+    <button class="filter-btn" data-day="friday">Friday</button>
+    <button class="filter-btn" data-day="saturday">Saturday</button>
+    <button class="filter-btn" data-day="sunday">Sunday</button>
+  </div>
+
+  <div id="schedule"></div>
+</div>
+
+<script>
+const gyms = [
+  // WEDNESDAY
+  { name: "Baem Jiu-Jitsu", city: "Fremont", time: "6:30PM", day: "wednesday", lat: 37.5485, lng: -121.9886 },
+
+  // FRIDAY
+  { name: "Buena Vida", city: "Sacramento", time: "6AM, 11:30AM, 6:30PM", day: "friday", lat: 38.5816, lng: -121.4944 },
+  { name: "MBJJ - Nova Uniao California", city: "Redwood City", time: "12PM", day: "friday", lat: 37.4852, lng: -122.2364 },
+  { name: "Jiu Jitsu & Dreams", city: "Antioch", time: "4PM", day: "friday", tags: ["kids"], lat: 38.0049, lng: -121.8058 },
+  { name: "Old School Martial Arts", city: "San Anselmo", time: "5:15PM", day: "friday", lat: 37.9746, lng: -122.5614 },
+  { name: "Jiu Jitsu & Dreams", city: "Antioch", time: "5:30PM", day: "friday", lat: 38.0049, lng: -121.7958 },
+  { name: "Capitol Jiu Jitsu", city: "Sacramento", time: "6PM", day: "friday", lat: 38.5766, lng: -121.5044 },
+  { name: "Heroes Martial Arts Campbell", city: "Campbell", time: "6PM", day: "friday", tags: ["nogi"], lat: 37.2872, lng: -121.9500 },
+  { name: "JG Academy / Club Tracy", city: "Tracy", time: "6PM", day: "friday", lat: 37.7397, lng: -121.4252 },
+  { name: "Lamorinda Jiu Jitsu", city: "Lafayette", time: "6PM", day: "friday", lat: 37.8858, lng: -122.1178 },
+  { name: "Logic Jiu-Jitsu", city: "Sacramento", time: "6PM", day: "friday", lat: 38.5716, lng: -121.4844 },
+  { name: "Kuleana Jiu-Jitsu", city: "Sunnyvale", time: "6:30PM", day: "friday", lat: 37.3688, lng: -122.0363 },
+  { name: "Pacific Combat Arts Academy", city: "Belmont", time: "6:30PM", day: "friday", lat: 37.5202, lng: -122.2758 },
+  { name: "Art of Entanglement", city: "Monterey", time: "7PM", day: "friday", lat: 36.6002, lng: -121.8947 },
+  { name: "Cave Academy", city: "Pacifica", time: "7PM", day: "friday", lat: 37.6138, lng: -122.4869 },
+  { name: "Steadfast Martial Arts", city: "Richmond", time: "7:15PM", day: "friday", tags: ["women", "gi"], lat: 37.9358, lng: -122.3478 },
+  { name: "Daruma Dojo", city: "Milpitas", time: "7:30PM", day: "friday", lat: 37.4323, lng: -121.8996 },
+  { name: "MMA Bravo Zulu", city: "Oakland", time: "7:30PM", day: "friday", tags: ["nogi"], lat: 37.8044, lng: -122.2712 },
+  { name: "10th Planet Walnut Creek", city: "Walnut Creek", time: "8PM", day: "friday", lat: 37.9101, lng: -122.0652 },
+
+  // SATURDAY
+  { name: "Cave Academy", city: "Pacifica", time: "8:30AM", day: "saturday", lat: 37.6138, lng: -122.4869 },
+  { name: "Combat Therapy", city: "Santa Rosa", time: "9AM", day: "saturday", tags: ["nogi"], lat: 38.4404, lng: -122.7141 },
+  { name: "Brujitsu", city: "Seaside", time: "9AM", day: "saturday", lat: 36.6108, lng: -121.8514 },
+  { name: "JG Academy", city: "Livermore", time: "9AM", day: "saturday", lat: 37.6819, lng: -121.7680 },
+  { name: "Jiu Jitsu & Dreams", city: "Antioch", time: "9AM", day: "saturday", lat: 38.0049, lng: -121.8058 },
+  { name: "Omni Movement", city: "Hercules", time: "9AM", day: "saturday", lat: 38.0174, lng: -122.2886 },
+  { name: "Sunnyvale Jiujitsu", city: "Sunnyvale", time: "9AM", day: "saturday", lat: 37.3688, lng: -122.0263 },
+  { name: "Grappling Arts of Stockton", city: "Stockton", time: "10AM", day: "saturday", lat: 37.9577, lng: -121.2908 },
+  { name: "Mount Diablo Jiujitsu", city: "Concord", time: "10AM", day: "saturday", lat: 37.9780, lng: -122.0311 },
+  { name: "Sceptre Jiujitsu", city: "San Mateo", time: "10AM", day: "saturday", lat: 37.5630, lng: -122.3255 },
+  { name: "Ultimate Athlete AJJ Club", city: "Modesto", time: "10AM", day: "saturday", tags: ["gi"], lat: 37.6391, lng: -120.9969 },
+  { name: "Refuge Jiu Jitsu", city: "Cameron Park", time: "10:30AM", day: "saturday", lat: 38.6688, lng: -120.9872 },
+  { name: "Elite Team Monterey", city: "Seaside", time: "11AM", day: "saturday", lat: 36.6148, lng: -121.8564 },
+  { name: "Ground Rules Academy", city: "Pleasanton", time: "11AM", day: "saturday", lat: 37.6604, lng: -121.8758 },
+  { name: "Gracie Fighter", city: "Vacaville", time: "11AM", day: "saturday", lat: 38.3566, lng: -121.9877 },
+  { name: "Island City Jiu-Jitsu", city: "Alameda", time: "11AM", day: "saturday", lat: 37.7652, lng: -122.2416 },
+  { name: "Lamorinda Jiu-Jitsu", city: "Lafayette", time: "11AM", day: "saturday", lat: 37.8858, lng: -122.1178 },
+  { name: "Payback BJJ", city: "Pittsburg", time: "11AM", day: "saturday", lat: 38.0280, lng: -121.8847 },
+  { name: "Team Dumdumaya", city: "Antioch", time: "11AM", day: "saturday", lat: 38.0099, lng: -121.8108 },
+  { name: "The Grapple HQ", city: "Ceres", time: "11AM", day: "saturday", lat: 37.5949, lng: -120.9577 },
+  { name: "Rolling Oak BJJ", city: "Petaluma", time: "11AM", day: "saturday", tags: ["gi"], lat: 38.2324, lng: -122.6367 },
+  { name: "Sonoma Valley Jiujitsu", city: "Sonoma", time: "11AM", day: "saturday", lat: 38.2919, lng: -122.4580 },
+  { name: "New Creation", city: "Concord", time: "11AM", day: "saturday", lat: 37.9740, lng: -122.0211 },
+  { name: "Baem Jiu-Jitsu", city: "Fremont", time: "11:30AM", day: "saturday", lat: 37.5485, lng: -121.9886 },
+  { name: "10th Planet Oakley", city: "Oakley", time: "12PM", day: "saturday", lat: 37.9974, lng: -121.7125 },
+  { name: "Magalit Jiu Jitsu", city: "San Francisco", time: "12PM", day: "saturday", lat: 37.7749, lng: -122.4194 },
+  { name: "Essence Jiu-Jitsu", city: "Walnut Creek", time: "12:30PM", day: "saturday", lat: 37.9101, lng: -122.0552 },
+  { name: "MBJJ - Nova Uniao California", city: "Redwood City", time: "12:30PM", day: "saturday", tags: ["nogi"], lat: 37.4852, lng: -122.2364 },
+
+  // SUNDAY
+  { name: "Koffee Krew", city: "Varies (check IG)", time: "7AM", day: "sunday", lat: 37.78, lng: -122.41 },
+  { name: "Ares BJJ / Buffalo Black Brotherhood", city: "Stockton", time: "8AM", day: "sunday", lat: 37.9577, lng: -121.3008 },
+  { name: "Sabre Jiujitsu", city: "Concord", time: "8AM", day: "sunday", lat: 37.9780, lng: -122.0411 },
+  { name: "10th Planet Walnut Creek", city: "Walnut Creek", time: "8:30AM", day: "sunday", lat: 37.9101, lng: -122.0652 },
+  { name: "Mount Diablo Jiujitsu", city: "Concord", time: "10AM", day: "sunday", lat: 37.9740, lng: -122.0311 },
+  { name: "Ralph Gracie Berkeley", city: "Berkeley", time: "9:30AM", day: "sunday", tags: ["women"], lat: 37.8716, lng: -122.2727 },
+  { name: "JG Academy", city: "Modesto", time: "9:30AM", day: "sunday", lat: 37.6391, lng: -121.0069 },
+  { name: "Team Santos Jiu Jitsu", city: "San Ramon", time: "9:30AM", day: "sunday", tags: ["nogi"], lat: 37.7799, lng: -121.9780 },
+  { name: "Art of Entanglement", city: "Monterey", time: "10AM", day: "sunday", lat: 36.6002, lng: -121.8947 },
+  { name: "Capitol Jiu Jitsu", city: "Sacramento", time: "10AM", day: "sunday", lat: 38.5766, lng: -121.5044 },
+  { name: "Kuleana Jiu-Jitsu", city: "Sunnyvale", time: "10AM", day: "sunday", lat: 37.3688, lng: -122.0363 },
+  { name: "Parkside Jiujitsu", city: "San Francisco", time: "10AM", day: "sunday", lat: 37.7449, lng: -122.4794 },
+  { name: "Ralph Gracie Berkeley", city: "Berkeley", time: "10AM", day: "sunday", lat: 37.8716, lng: -122.2677 },
+  { name: "Sultada Jiujitsu", city: "Orinda", time: "10AM", day: "sunday", lat: 37.8763, lng: -122.1797 },
+  { name: "Ultimate Athlete AJJ Club", city: "Modesto", time: "10AM", day: "sunday", tags: ["nogi"], lat: 37.6391, lng: -120.9969 },
+  { name: "Warrior BJJ Academy", city: "San Ramon", time: "10AM", day: "sunday", lat: 37.7799, lng: -121.9680 },
+  { name: "Zmata", city: "Castro Valley", time: "10AM", day: "sunday", lat: 37.6941, lng: -122.0864 },
+  { name: "10th Planet Stockton", city: "Stockton", time: "10:30AM", day: "sunday", lat: 37.9527, lng: -121.2808 },
+  { name: "The GF Club", city: "Santa Rosa", time: "10:30AM", day: "sunday", tags: ["nogi"], lat: 38.4404, lng: -122.7041 },
+  { name: "New Creation", city: "Benicia", time: "10:30AM", day: "sunday", lat: 38.0494, lng: -122.1586 },
+  { name: "Dominat10n Jiu Jitsu", city: "Oakland", time: "11AM", day: "sunday", lat: 37.8044, lng: -122.2612 },
+  { name: "Logic Jiu-Jitsu", city: "Sacramento", time: "11AM", day: "sunday", lat: 38.5716, lng: -121.4844 },
+  { name: "Rolling Oak BJJ", city: "Petaluma", time: "11AM", day: "sunday", tags: ["nogi"], lat: 38.2324, lng: -122.6367 },
+  { name: "Sunnyvale Jiu Jitsu", city: "Sunnyvale", time: "11AM", day: "sunday", lat: 37.3688, lng: -122.0163 },
+  { name: "Misfit Combat", city: "Emeryville", time: "12PM", day: "sunday", lat: 37.8313, lng: -122.2852 },
+  { name: "Steadfast Martial Arts", city: "Richmond", time: "2PM", day: "sunday", tags: ["nogi"], lat: 37.9358, lng: -122.3478 },
+  { name: "Club Tracy Grappling & Jiu-Jitsu", city: "Tracy", time: "6PM", day: "sunday", lat: 37.7397, lng: -121.4352 },
+  { name: "JG Academy", city: "Tracy", time: "6PM", day: "sunday", lat: 37.7397, lng: -121.4252 },
+];
+
+// Map setup
+const map = L.map('map').setView([37.75, -121.9], 9);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors',
+  maxZoom: 18,
+}).addTo(map);
+
+const dayColors = {
+  wednesday: '#2e7d32',
+  friday: '#1565c0',
+  saturday: '#e65100',
+  sunday: '#c62828'
+};
+
+const markers = [];
+
+function createIcon(color) {
+  return L.divIcon({
+    className: 'custom-pin',
+    html: `<svg width="24" height="36" viewBox="0 0 24 36"><path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="${color}" stroke="#fff" stroke-width="1.5"/><circle cx="12" cy="11" r="5" fill="#fff" opacity="0.9"/></svg>`,
+    iconSize: [24, 36],
+    iconAnchor: [12, 36],
+    popupAnchor: [0, -36]
+  });
+}
+
+gyms.forEach(gym => {
+  const color = dayColors[gym.day];
+  const icon = createIcon(color);
+  const tagsHtml = (gym.tags || []).map(t => {
+    const labels = { nogi: 'No Gi', gi: 'Gi', women: 'Women Only', kids: 'Kids' };
+    return `<span style="background:${color}22;color:${color};padding:1px 6px;border-radius:8px;font-size:11px;font-weight:600">${labels[t] || t}</span>`;
+  }).join(' ');
+
+  const popup = `<div style="font-family:system-ui;min-width:180px">
+    <strong style="font-size:14px">${gym.name}</strong><br>
+    <span style="color:#666">${gym.city}</span><br>
+    <span style="font-weight:700;color:${color};font-size:15px">${gym.time}</span><br>
+    <span style="text-transform:capitalize;font-size:12px;color:${color}">${gym.day}</span>
+    ${tagsHtml ? '<br>' + tagsHtml : ''}
+  </div>`;
+
+  const marker = L.marker([gym.lat, gym.lng], { icon }).addTo(map).bindPopup(popup);
+  marker.gymData = gym;
+  markers.push(marker);
+});
+
+// Day filter
+const dayOrder = ['wednesday', 'friday', 'saturday', 'sunday'];
+const dayLabels = { wednesday: 'Wednesday', friday: 'Friday', saturday: 'Saturday', sunday: 'Sunday' };
+
+let activeDay = 'all';
+let searchTerm = '';
+
+function render() {
+  const container = document.getElementById('schedule');
+  let html = '';
+  const days = activeDay === 'all' ? dayOrder : [activeDay];
+
+  days.forEach(day => {
+    const filtered = gyms.filter(g => g.day === day &&
+      (g.name.toLowerCase().includes(searchTerm) || g.city.toLowerCase().includes(searchTerm))
+    );
+    if (!filtered.length) return;
+
+    html += `<div class="day-section" data-day="${day}">
+      <div class="day-header ${day}">${dayLabels[day]} <span class="count-badge">${filtered.length}</span></div>
+      <div class="gym-grid">`;
+
+    filtered.forEach(gym => {
+      const tagsHtml = (gym.tags || []).map(t => {
+        const cls = { nogi: 'nogi', gi: 'gi', women: 'women', kids: 'kids' }[t] || '';
+        const labels = { nogi: 'No Gi', gi: 'Gi', women: 'Women Only', kids: 'Kids' };
+        return `<span class="tag ${cls}">${labels[t] || t}</span>`;
+      }).join('');
+
+      html += `<div class="gym-card ${day}" data-lat="${gym.lat}" data-lng="${gym.lng}">
+        <div class="gym-info">
+          <h3>${gym.name}</h3>
+          <div class="city">${gym.city}</div>
+          ${tagsHtml ? `<div class="tags">${tagsHtml}</div>` : ''}
+        </div>
+        <div class="gym-time">${gym.time}</div>
+      </div>`;
+    });
+
+    html += '</div></div>';
+  });
+
+  container.innerHTML = html || '<p style="text-align:center;color:#999;padding:2rem">No results found.</p>';
+
+  // Update markers
+  markers.forEach(m => {
+    const g = m.gymData;
+    const dayMatch = activeDay === 'all' || g.day === activeDay;
+    const searchMatch = g.name.toLowerCase().includes(searchTerm) || g.city.toLowerCase().includes(searchTerm);
+    if (dayMatch && searchMatch) {
+      m.addTo(map);
+    } else {
+      map.removeLayer(m);
+    }
+  });
+
+  // Click cards to zoom
+  document.querySelectorAll('.gym-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const lat = parseFloat(card.dataset.lat);
+      const lng = parseFloat(card.dataset.lng);
+      map.setView([lat, lng], 13);
+      markers.forEach(m => {
+        if (Math.abs(m.gymData.lat - lat) < 0.005 && Math.abs(m.gymData.lng - lng) < 0.005) {
+          m.openPopup();
+        }
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+}
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeDay = btn.dataset.day;
+    render();
+  });
+});
+
+document.getElementById('search').addEventListener('input', e => {
+  searchTerm = e.target.value.toLowerCase();
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
