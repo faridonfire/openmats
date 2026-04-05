@@ -290,9 +290,10 @@ function render() {
   });
 }
 
-// Day filter buttons
+// Day filter buttons — only toggle within day group
 document.querySelectorAll('.filter-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
     document.querySelectorAll('.filter-btn').forEach(b => {
       b.classList.remove('bg-brand-500', 'text-white');
       b.classList.add('bg-white', 'text-brand-500');
@@ -302,7 +303,6 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     activeDay = btn.dataset.day;
     render();
   });
-  // Init styles
   if (btn.classList.contains('active')) {
     btn.classList.add('bg-brand-500', 'text-white');
   } else {
@@ -310,19 +310,19 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
   }
 });
 
-// Tag filter buttons
+// Tag filter buttons — toggle independently, don't affect day filters
+const tagColors = { nogi: '#a855f7', women: '#ec4899', gi: '#6366f1', kids: '#14b8a6' };
 document.querySelectorAll('.tag-filter').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
     const tag = btn.dataset.tag;
     if (activeTags.has(tag)) {
       activeTags.delete(tag);
-      btn.classList.remove('!bg-purple-500', '!bg-pink-500', '!bg-indigo-500', '!bg-teal-500', '!text-white');
       btn.style.backgroundColor = '';
       btn.style.color = '';
     } else {
       activeTags.add(tag);
-      const colors = { nogi: '#a855f7', women: '#ec4899', gi: '#6366f1', kids: '#14b8a6' };
-      btn.style.backgroundColor = colors[tag];
+      btn.style.backgroundColor = tagColors[tag];
       btn.style.color = 'white';
     }
     render();
