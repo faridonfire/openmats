@@ -1,101 +1,93 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bay Area Open Mats - March 2026</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        brand: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#0f3460', 600: '#0c2a50', 700: '#1a1a2e', 800: '#16213e', 900: '#0f172a' },
+        wed: { light: '#dcfce7', DEFAULT: '#16a34a', dark: '#166534' },
+        fri: { light: '#dbeafe', DEFAULT: '#2563eb', dark: '#1e40af' },
+        sat: { light: '#ffedd5', DEFAULT: '#ea580c', dark: '#9a3412' },
+        sun: { light: '#fce7f3', DEFAULT: '#dc2626', dark: '#991b1b' },
+        ig: '#c13584',
+      }
+    }
+  }
+}
+</script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f7; color: #1d1d1f; }
-  header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color: white; padding: 2rem; text-align: center; }
-  header h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; }
-  header p { opacity: 0.8; font-size: 0.95rem; }
-  header a { color: #90caf9; text-decoration: none; }
-  header a:hover { text-decoration: underline; }
-  #map { height: 500px; width: 100%; border-bottom: 3px solid #0f3460; }
-  .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
-  .filters { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; position: sticky; top: 0; background: #f5f5f7; padding: 1rem 0; z-index: 400; }
-  .filter-btn { padding: 0.5rem 1.2rem; border: 2px solid #0f3460; border-radius: 999px; background: white; color: #0f3460; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; }
-  .filter-btn:hover, .filter-btn.active { background: #0f3460; color: white; }
-  .day-section { margin-bottom: 2rem; }
-  .day-header { font-size: 1.4rem; font-weight: 700; padding: 0.75rem 1rem; border-radius: 10px; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
-  .day-header.wednesday { background: #e8f5e9; color: #2e7d32; }
-  .day-header.friday { background: #e3f2fd; color: #1565c0; }
-  .day-header.saturday { background: #fff3e0; color: #e65100; }
-  .day-header.sunday { background: #fce4ec; color: #c62828; }
-  .gym-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 0.75rem; }
-  .gym-card { background: white; border-radius: 10px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: transform 0.15s, box-shadow 0.15s; cursor: pointer; border-left: 4px solid transparent; }
-  .gym-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
-  .gym-card.wednesday { border-left-color: #4caf50; }
-  .gym-card.friday { border-left-color: #1e88e5; }
-  .gym-card.saturday { border-left-color: #fb8c00; }
-  .gym-card.sunday { border-left-color: #e53935; }
-  .gym-info h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.2rem; }
-  .gym-info .city { font-size: 0.8rem; color: #666; }
-  .gym-info .tags { display: flex; gap: 0.3rem; margin-top: 0.3rem; flex-wrap: wrap; }
-  .gym-info .ig-link { font-size: 0.75rem; color: #c13584; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.25rem; }
-  .gym-info .ig-link:hover { text-decoration: underline; }
-  .gym-info .ig-link svg { width: 13px; height: 13px; fill: #c13584; }
-  .tag { font-size: 0.65rem; padding: 0.15rem 0.5rem; border-radius: 999px; font-weight: 600; }
-  .tag.nogi { background: #f3e5f5; color: #7b1fa2; }
-  .tag.gi { background: #e8eaf6; color: #283593; }
-  .tag.women { background: #fce4ec; color: #c62828; }
-  .tag.kids { background: #e0f7fa; color: #00838f; }
-  .gym-time { font-size: 1rem; font-weight: 700; color: #0f3460; white-space: nowrap; margin-left: 1rem; }
-  .count-badge { background: rgba(255,255,255,0.25); padding: 0.2rem 0.7rem; border-radius: 999px; font-size: 0.85rem; }
-  .search-box { width: 100%; padding: 0.7rem 1rem; border: 2px solid #ddd; border-radius: 10px; font-size: 1rem; margin-bottom: 1rem; outline: none; transition: border-color 0.2s; }
-  .search-box:focus { border-color: #0f3460; }
-  .legend { display: flex; gap: 1rem; flex-wrap: wrap; padding: 0.75rem 1rem; background: white; border-radius: 10px; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 0.85rem; align-items: center; }
-  .legend-item { display: flex; align-items: center; gap: 0.3rem; }
-  .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
-  @media (max-width: 600px) { .gym-grid { grid-template-columns: 1fr; } #map { height: 350px; } }
+  /* Leaflet overrides */
+  .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important; }
+  .leaflet-popup-content { margin: 12px 16px !important; }
+  /* Sticky filter bar */
+  .filter-bar { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .filter-bar::-webkit-scrollbar { display: none; }
 </style>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-900 antialiased">
 
-<header>
-  <h1>Bay Area Open Mats</h1>
-  <p>March 2026 Schedule &middot; Source: <a href="https://instagram.com/bayareaopenmat" target="_blank">@bayareaopenmat</a></p>
+<!-- Header -->
+<header class="bg-gradient-to-br from-brand-700 via-brand-800 to-brand-500 text-white px-4 py-6 sm:py-8 text-center">
+  <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Bay Area Open Mats</h1>
+  <p class="mt-1 text-sm sm:text-base text-white/70">March 2026 Schedule &middot; Source:
+    <a href="https://instagram.com/bayareaopenmat" target="_blank" class="text-blue-300 hover:underline">@bayareaopenmat</a>
+  </p>
 </header>
 
-<div id="map"></div>
+<!-- Map -->
+<div id="map" class="w-full h-[300px] sm:h-[420px] md:h-[500px] border-b-[3px] border-brand-500 z-0"></div>
 
-<div class="container">
-  <input type="text" class="search-box" id="search" placeholder="Search by gym name or city...">
+<!-- Main content -->
+<div class="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-4">
 
-  <div class="legend">
-    <strong>Map pins:</strong>
-    <span class="legend-item"><span class="legend-dot" style="background:#2e7d32"></span> Wed</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#1565c0"></span> Fri</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#e65100"></span> Sat</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#c62828"></span> Sun</span>
+  <!-- Search -->
+  <div class="relative mb-3">
+    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+    <input type="text" id="search" placeholder="Search by gym name or city..."
+      class="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 bg-white text-sm sm:text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition" />
   </div>
 
-  <div class="filters">
-    <button class="filter-btn active" data-day="all">All Days</button>
-    <button class="filter-btn" data-day="wednesday">Wednesday</button>
-    <button class="filter-btn" data-day="friday">Friday</button>
-    <button class="filter-btn" data-day="saturday">Saturday</button>
-    <button class="filter-btn" data-day="sunday">Sunday</button>
-    <span style="border-left:2px solid #ddd;height:24px;margin:0 0.25rem"></span>
-    <button class="filter-btn tag-filter" data-tag="nogi">No Gi</button>
-    <button class="filter-btn tag-filter" data-tag="women">Women Only</button>
-    <button class="filter-btn tag-filter" data-tag="gi">Gi</button>
-    <button class="filter-btn tag-filter" data-tag="kids">Kids</button>
+  <!-- Legend -->
+  <div class="flex items-center gap-3 sm:gap-4 flex-wrap bg-white rounded-xl px-3 py-2 shadow-sm border border-gray-100 mb-3 text-xs sm:text-sm text-gray-600">
+    <span class="font-semibold text-gray-800">Map pins:</span>
+    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-wed"></span> Wed</span>
+    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-fri"></span> Fri</span>
+    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sat"></span> Sat</span>
+    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sun"></span> Sun</span>
   </div>
 
-  <div id="schedule"></div>
+  <!-- Filters -->
+  <div class="filter-bar sticky top-0 z-30 bg-gray-50/95 backdrop-blur-sm py-2.5 -mx-3 px-3 sm:-mx-4 sm:px-4 flex gap-2 overflow-x-auto">
+    <button class="filter-btn active shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border-2 border-brand-500 text-xs sm:text-sm font-semibold transition-all" data-day="all">All Days</button>
+    <button class="filter-btn shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border-2 border-brand-500 text-xs sm:text-sm font-semibold transition-all" data-day="wednesday">Wed</button>
+    <button class="filter-btn shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border-2 border-brand-500 text-xs sm:text-sm font-semibold transition-all" data-day="friday">Fri</button>
+    <button class="filter-btn shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border-2 border-brand-500 text-xs sm:text-sm font-semibold transition-all" data-day="saturday">Sat</button>
+    <button class="filter-btn shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border-2 border-brand-500 text-xs sm:text-sm font-semibold transition-all" data-day="sunday">Sun</button>
+    <span class="shrink-0 w-px h-6 self-center bg-gray-300"></span>
+    <button class="tag-filter shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border-2 border-purple-500 text-purple-600 bg-white text-xs sm:text-sm font-semibold transition-all hover:bg-purple-500 hover:text-white" data-tag="nogi">No Gi</button>
+    <button class="tag-filter shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border-2 border-pink-500 text-pink-600 bg-white text-xs sm:text-sm font-semibold transition-all hover:bg-pink-500 hover:text-white" data-tag="women">Women Only</button>
+    <button class="tag-filter shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border-2 border-indigo-500 text-indigo-600 bg-white text-xs sm:text-sm font-semibold transition-all hover:bg-indigo-500 hover:text-white" data-tag="gi">Gi</button>
+    <button class="tag-filter shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border-2 border-teal-500 text-teal-600 bg-white text-xs sm:text-sm font-semibold transition-all hover:bg-teal-500 hover:text-white" data-tag="kids">Kids</button>
+  </div>
+
+  <!-- Schedule -->
+  <div id="schedule" class="mt-3"></div>
 </div>
 
 <script>
-const igIcon = '<svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>';
+const igSvg = '<svg class="inline w-3.5 h-3.5 mr-0.5 fill-current" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>';
 
 const gyms = [
   // WEDNESDAY
   { name: "Baem Jiu-Jitsu", city: "Fremont", time: "6:30PM", day: "wednesday", ig: "baemjiujitsu", lat: 37.5485, lng: -121.9886 },
-
   // FRIDAY
   { name: "Buena Vida", city: "Sacramento", time: "6AM, 11:30AM, 6:30PM", day: "friday", ig: "buenavidajiujitsuacademy", lat: 38.5816, lng: -121.4944 },
   { name: "MBJJ - Nova Uniao California", city: "Redwood City", time: "12PM", day: "friday", ig: "mbjjacademy", lat: 37.4852, lng: -122.2364 },
@@ -115,7 +107,6 @@ const gyms = [
   { name: "Daruma Dojo", city: "Milpitas", time: "7:30PM", day: "friday", ig: "teamdarumadojo_milpitas", lat: 37.4323, lng: -121.8996 },
   { name: "MMA Bravo Zulu", city: "Oakland", time: "7:30PM", day: "friday", tags: ["nogi"], ig: "mmabravozulu", lat: 37.8044, lng: -122.2712 },
   { name: "10th Planet Walnut Creek", city: "Walnut Creek", time: "8PM", day: "friday", ig: "10pwalnutcreek", lat: 37.9101, lng: -122.0652 },
-
   // SATURDAY
   { name: "Cave Academy", city: "Pacifica", time: "8:30AM", day: "saturday", ig: "cave_academyjj", lat: 37.6138, lng: -122.4869 },
   { name: "Combat Therapy", city: "Santa Rosa", time: "9AM", day: "saturday", tags: ["nogi"], ig: "combattherapy", lat: 38.4404, lng: -122.7141 },
@@ -145,7 +136,6 @@ const gyms = [
   { name: "Magalit Jiu Jitsu", city: "San Francisco", time: "12PM", day: "saturday", ig: "magalitjj", lat: 37.7749, lng: -122.4194 },
   { name: "Essence Jiu-Jitsu", city: "Walnut Creek", time: "12:30PM", day: "saturday", ig: "essencebjjwalnutcreek", lat: 37.9101, lng: -122.0552 },
   { name: "MBJJ - Nova Uniao California", city: "Redwood City", time: "12:30PM", day: "saturday", tags: ["nogi"], ig: "mbjjacademy", lat: 37.4852, lng: -122.2364 },
-
   // SUNDAY
   { name: "Koffee Krew", city: "Varies (check IG)", time: "7AM", day: "sunday", ig: "thekoffeekrew", lat: 37.78, lng: -122.41 },
   { name: "Ares BJJ / Buffalo Black Brotherhood", city: "Stockton", time: "8AM", day: "sunday", ig: "aresbjj.stockton", lat: 37.9577, lng: -121.3008 },
@@ -177,152 +167,161 @@ const gyms = [
   { name: "JG Academy", city: "Tracy", time: "6PM", day: "sunday", ig: "jgacademy.tracy", lat: 37.7397, lng: -121.4252 },
 ];
 
-// Map setup
+// Map
 const map = L.map('map').setView([37.75, -121.9], 9);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors',
-  maxZoom: 18,
+  attribution: '&copy; OpenStreetMap contributors', maxZoom: 18,
 }).addTo(map);
 
-const dayColors = {
-  wednesday: '#2e7d32',
-  friday: '#1565c0',
-  saturday: '#e65100',
-  sunday: '#c62828'
+const dayColors = { wednesday: '#16a34a', friday: '#2563eb', saturday: '#ea580c', sunday: '#dc2626' };
+const dayBorderClass = { wednesday: 'border-l-wed', friday: 'border-l-fri', saturday: 'border-l-sat', sunday: 'border-l-sun' };
+const dayHeaderBg = { wednesday: 'bg-wed-light text-wed-dark', friday: 'bg-fri-light text-fri-dark', saturday: 'bg-sat-light text-sat-dark', sunday: 'bg-sun-light text-sun-dark' };
+const tagStyles = {
+  nogi: 'bg-purple-100 text-purple-700',
+  gi: 'bg-indigo-100 text-indigo-700',
+  women: 'bg-pink-100 text-pink-700',
+  kids: 'bg-teal-100 text-teal-700',
 };
-
+const tagLabels = { nogi: 'No Gi', gi: 'Gi', women: 'Women Only', kids: 'Kids' };
 const markers = [];
 
 function createIcon(color) {
   return L.divIcon({
-    className: 'custom-pin',
-    html: `<svg width="24" height="36" viewBox="0 0 24 36"><path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="${color}" stroke="#fff" stroke-width="1.5"/><circle cx="12" cy="11" r="5" fill="#fff" opacity="0.9"/></svg>`,
-    iconSize: [24, 36],
-    iconAnchor: [12, 36],
-    popupAnchor: [0, -36]
+    className: '',
+    html: `<svg width="28" height="40" viewBox="0 0 24 36"><path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="${color}" stroke="#fff" stroke-width="1.5"/><circle cx="12" cy="11" r="5" fill="#fff" opacity="0.9"/></svg>`,
+    iconSize: [28, 40], iconAnchor: [14, 40], popupAnchor: [0, -40]
   });
 }
 
 gyms.forEach(gym => {
   const color = dayColors[gym.day];
-  const icon = createIcon(color);
-  const tagsHtml = (gym.tags || []).map(t => {
-    const labels = { nogi: 'No Gi', gi: 'Gi', women: 'Women Only', kids: 'Kids' };
-    return `<span style="background:${color}22;color:${color};padding:1px 6px;border-radius:8px;font-size:11px;font-weight:600">${labels[t] || t}</span>`;
-  }).join(' ');
-
-  const igHtml = gym.ig ? `<br><a href="https://instagram.com/${gym.ig}" target="_blank" style="color:#c13584;font-size:12px;text-decoration:none;font-weight:600">@${gym.ig}</a>` : '';
-
+  const tags = (gym.tags || []).map(t =>
+    `<span style="background:${color}18;color:${color};padding:1px 6px;border-radius:8px;font-size:11px;font-weight:600">${tagLabels[t] || t}</span>`
+  ).join(' ');
+  const ig = gym.ig ? `<br><a href="https://instagram.com/${gym.ig}" target="_blank" rel="noopener" style="color:#c13584;font-size:12px;text-decoration:none;font-weight:600">@${gym.ig}</a>` : '';
   const popup = `<div style="font-family:system-ui;min-width:180px">
     <strong style="font-size:14px">${gym.name}</strong><br>
     <span style="color:#666">${gym.city}</span><br>
     <span style="font-weight:700;color:${color};font-size:15px">${gym.time}</span><br>
     <span style="text-transform:capitalize;font-size:12px;color:${color}">${gym.day}</span>
-    ${tagsHtml ? '<br>' + tagsHtml : ''}
-    ${igHtml}
+    ${tags ? '<br>' + tags : ''}${ig}
   </div>`;
-
-  const marker = L.marker([gym.lat, gym.lng], { icon }).addTo(map).bindPopup(popup);
+  const marker = L.marker([gym.lat, gym.lng], { icon: createIcon(color) }).addTo(map).bindPopup(popup);
   marker.gymData = gym;
   markers.push(marker);
 });
 
-// Day filter
 const dayOrder = ['wednesday', 'friday', 'saturday', 'sunday'];
-const dayLabels = { wednesday: 'Wednesday', friday: 'Friday', saturday: 'Saturday', sunday: 'Sunday' };
+const dayLabelsMap = { wednesday: 'Wednesday', friday: 'Friday', saturday: 'Saturday', sunday: 'Sunday' };
+let activeDay = 'all', searchTerm = '', activeTags = new Set();
 
-let activeDay = 'all';
-let searchTerm = '';
-let activeTags = new Set();
+function fuzzyMatch(text, query) {
+  if (!query) return true;
+  text = text.toLowerCase();
+  query = query.toLowerCase();
+  // Exact substring match first
+  if (text.includes(query)) return true;
+  // Fuzzy: all query chars appear in order
+  let qi = 0;
+  for (let i = 0; i < text.length && qi < query.length; i++) {
+    if (text[i] === query[qi]) qi++;
+  }
+  if (qi === query.length) return true;
+  // Token match: every word in query matches start of some word in text
+  const qWords = query.split(/\s+/).filter(Boolean);
+  const tWords = text.split(/[\s\-&/,]+/).filter(Boolean);
+  return qWords.length > 0 && qWords.every(qw => tWords.some(tw => tw.startsWith(qw)));
+}
+
+function matchGym(g) {
+  const dayOk = activeDay === 'all' || g.day === activeDay;
+  const searchOk = fuzzyMatch(g.name + ' ' + g.city, searchTerm);
+  const tagOk = activeTags.size === 0 || (g.tags && g.tags.some(t => activeTags.has(t)));
+  return dayOk && searchOk && tagOk;
+}
 
 function render() {
-  const container = document.getElementById('schedule');
+  const el = document.getElementById('schedule');
   let html = '';
   const days = activeDay === 'all' ? dayOrder : [activeDay];
-
   days.forEach(day => {
-    const filtered = gyms.filter(g => g.day === day &&
-      (g.name.toLowerCase().includes(searchTerm) || g.city.toLowerCase().includes(searchTerm)) &&
-      (activeTags.size === 0 || (g.tags && g.tags.some(t => activeTags.has(t))))
-    );
-    if (!filtered.length) return;
-
-    html += `<div class="day-section" data-day="${day}">
-      <div class="day-header ${day}">${dayLabels[day]} <span class="count-badge">${filtered.length}</span></div>
-      <div class="gym-grid">`;
-
-    filtered.forEach(gym => {
-      const tagsHtml = (gym.tags || []).map(t => {
-        const cls = { nogi: 'nogi', gi: 'gi', women: 'women', kids: 'kids' }[t] || '';
-        const labels = { nogi: 'No Gi', gi: 'Gi', women: 'Women Only', kids: 'Kids' };
-        return `<span class="tag ${cls}">${labels[t] || t}</span>`;
-      }).join('');
-
-      const igHtml = gym.ig ? `<a class="ig-link" href="https://instagram.com/${gym.ig}" target="_blank" onclick="event.stopPropagation()">${igIcon} @${gym.ig}</a>` : '';
-
-      html += `<div class="gym-card ${day}" data-lat="${gym.lat}" data-lng="${gym.lng}">
-        <div class="gym-info">
-          <h3>${gym.name}</h3>
-          <div class="city">${gym.city}</div>
-          ${tagsHtml ? `<div class="tags">${tagsHtml}</div>` : ''}
-          ${igHtml}
+    const list = gyms.filter(g => g.day === day && matchGym(g));
+    if (!list.length) return;
+    html += `<div class="mb-6">
+      <div class="flex items-center gap-2 px-3 py-2 rounded-xl mb-2 font-bold text-base sm:text-lg ${dayHeaderBg[day]}">
+        ${dayLabelsMap[day]}
+        <span class="text-xs sm:text-sm font-semibold opacity-70 bg-white/30 px-2 py-0.5 rounded-full">${list.length}</span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">`;
+    list.forEach(gym => {
+      const tags = (gym.tags || []).map(t =>
+        `<span class="text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full font-semibold ${tagStyles[t] || ''}">${tagLabels[t] || t}</span>`
+      ).join('');
+      const ig = gym.ig
+        ? `<a href="https://instagram.com/${gym.ig}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="inline-flex items-center gap-0.5 text-[11px] sm:text-xs font-semibold text-ig hover:underline mt-0.5">${igSvg}@${gym.ig}</a>`
+        : '';
+      html += `<div class="gym-card group bg-white rounded-xl p-3 sm:p-4 flex justify-between items-start shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer border-l-4 ${dayBorderClass[day]}" data-lat="${gym.lat}" data-lng="${gym.lng}">
+        <div class="min-w-0 flex-1">
+          <h3 class="text-sm sm:text-[15px] font-semibold leading-tight truncate">${gym.name}</h3>
+          <p class="text-xs sm:text-sm text-gray-500 mt-0.5">${gym.city}</p>
+          ${tags ? `<div class="flex flex-wrap gap-1 mt-1">${tags}</div>` : ''}
+          ${ig}
         </div>
-        <div class="gym-time">${gym.time}</div>
+        <div class="text-sm sm:text-base font-bold text-brand-500 whitespace-nowrap ml-3 mt-0.5">${gym.time}</div>
       </div>`;
     });
-
     html += '</div></div>';
   });
+  el.innerHTML = html || '<p class="text-center text-gray-400 py-8">No results found.</p>';
 
-  container.innerHTML = html || '<p style="text-align:center;color:#999;padding:2rem">No results found.</p>';
+  markers.forEach(m => { matchGym(m.gymData) ? m.addTo(map) : map.removeLayer(m); });
 
-  // Update markers
-  markers.forEach(m => {
-    const g = m.gymData;
-    const dayMatch = activeDay === 'all' || g.day === activeDay;
-    const searchMatch = g.name.toLowerCase().includes(searchTerm) || g.city.toLowerCase().includes(searchTerm);
-    const tagMatch = activeTags.size === 0 || (g.tags && g.tags.some(t => activeTags.has(t)));
-    if (dayMatch && searchMatch && tagMatch) {
-      m.addTo(map);
-    } else {
-      map.removeLayer(m);
-    }
-  });
-
-  // Click cards to zoom
   document.querySelectorAll('.gym-card').forEach(card => {
     card.addEventListener('click', () => {
-      const lat = parseFloat(card.dataset.lat);
-      const lng = parseFloat(card.dataset.lng);
+      const lat = +card.dataset.lat, lng = +card.dataset.lng;
       map.setView([lat, lng], 13);
       markers.forEach(m => {
-        if (Math.abs(m.gymData.lat - lat) < 0.005 && Math.abs(m.gymData.lng - lng) < 0.005) {
-          m.openPopup();
-        }
+        if (Math.abs(m.gymData.lat - lat) < 0.005 && Math.abs(m.gymData.lng - lng) < 0.005) m.openPopup();
       });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
 }
 
+// Day filter buttons
 document.querySelectorAll('.filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.classList.remove('bg-brand-500', 'text-white');
+      b.classList.add('bg-white', 'text-brand-500');
+    });
+    btn.classList.remove('bg-white', 'text-brand-500');
+    btn.classList.add('bg-brand-500', 'text-white');
     activeDay = btn.dataset.day;
     render();
   });
+  // Init styles
+  if (btn.classList.contains('active')) {
+    btn.classList.add('bg-brand-500', 'text-white');
+  } else {
+    btn.classList.add('bg-white', 'text-brand-500');
+  }
 });
 
+// Tag filter buttons
 document.querySelectorAll('.tag-filter').forEach(btn => {
   btn.addEventListener('click', () => {
     const tag = btn.dataset.tag;
     if (activeTags.has(tag)) {
       activeTags.delete(tag);
-      btn.classList.remove('active');
+      btn.classList.remove('!bg-purple-500', '!bg-pink-500', '!bg-indigo-500', '!bg-teal-500', '!text-white');
+      btn.style.backgroundColor = '';
+      btn.style.color = '';
     } else {
       activeTags.add(tag);
-      btn.classList.add('active');
+      const colors = { nogi: '#a855f7', women: '#ec4899', gi: '#6366f1', kids: '#14b8a6' };
+      btn.style.backgroundColor = colors[tag];
+      btn.style.color = 'white';
     }
     render();
   });
